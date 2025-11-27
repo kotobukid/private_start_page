@@ -51,39 +51,84 @@ const update_cache = (force: boolean) => {
 }
 
 const gist_url = ref('')
+
+// 表示名から先頭1文字を取り出して大文字化（日本語等はそのまま）
+const getInitial2 = (name: string): string => {
+  if (!name) return '?'
+  const ch = name.trim().charAt(0)
+  const ch2 = name.trim().charAt(1)
+  // アルファベットの場合のみ大文字化
+  return (/[a-z]/i.test(ch) ? ch.toUpperCase() : ch) + (ch2 ? ch2 : '')
+}
 </script>
 
 <template lang="pug">
-  nav
-    span Source gist
-    select(v-model="gist_url")
-      option(value="")
-      option(v-for="(g, i) in gists" :key="g.url ?? g.title ?? i" :value="g.url") {{ g.title }}
-    button(@click="update_cache(true)") fetch force
-  .main
+  nav.container
     ul
-      li.bookmark(v-for="[k, v] in bookmarks" :key="k")
-        a(:href="k") {{ v }}
+      li
+        strong Source gist
+      li
+        select(v-model="gist_url")
+          option(value="")
+          option(v-for="(g, i) in gists" :key="g.url ?? g.title ?? i" :value="g.url") {{ g.title }}
+    ul
+      li
+        button(@click="update_cache(true)") Force fetch
+  main.container
+    .link-grid
+      a.link-item(v-for="[k, v] in bookmarks" :key="k" :href="k" target="_blank" rel="noopener noreferrer")
+        span.initial {{ getInitial2(v) }}
+        span.title {{ v }}
 </template>
 
 <style scoped lang="less">
-ul {
-  list-style: none;
+/* リンクをフレックスで並べ、2段構成（頭文字 + タイトル）のボタン風に */
+.link-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-li.bookmark {
-  border: 1px solid grey;
-  border-radius: 8px;
-  padding: 8px;
-  margin: 2px;
-  background-color: #fff;
-  display: inline-block;
-  width: 200px;
+.link-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  padding: 0.75rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(125, 125, 125, 0.25);
+  background: rgba(127, 127, 127, 0.06);
+  transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
 
-  &:hover {
-    background-color: #eff;
-    border-color: blue;
-    cursor: pointer;
-  }
+  /* 幅を制御: 6〜10個/列程度を目安に */
+  flex: 1 1 10rem; /* ベース ~160px */
+  max-width: 14rem; /* 上限 ~224px */
+  min-width: 8rem;  /* 下限 ~128px */
+}
+
+.link-item:hover,
+.link-item:focus-visible {
+  border-color: rgba(125, 125, 125, 0.45);
+  background: rgba(127, 127, 127, 0.12);
+  transform: translateY(-1px);
+}
+
+.initial {
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.title {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted-color, #6b7280);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
