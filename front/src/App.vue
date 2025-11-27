@@ -1,30 +1,75 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import axios from 'axios'
+import {onMounted, ref} from 'vue'
+import type {Gist, Bookmark} from './types'
+
+const gists = ref<Gist[]>([])
+
+onMounted(async () => {
+  try {
+    const {data} = await axios.get<{ gists: Gist[] }>('/api/gists.json')
+    // 受け取る配列の要素が string や別キーの場合に備えて正規化
+
+    gists.value = data.gists || [];
+
+    if (gists.value.length > 0) {
+      gist_url.value = gists.value[0]!.url;
+
+      update_cache(false);
+
+    } else {
+      alert('No gists found.');
+    }
+
+  } catch (err) {
+    console.error('Failed to fetch gists:', err)
+  }
+})
+
+const bookmarks = ref<Bookmark[]>([])
+
+const update_cache = (force: boolean) => {
+  axios.get('/api/bookmarks.json', {
+    params: {
+      force: force ? 'yes' : '',
+      url: gist_url.value
+    }
+  }).then(({data}) => {
+    bookmarks.value = data.items || [];
+  });
+}
+
+const gist_url = ref('')
 </script>
 
-<template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+<template lang="pug">
+  select(v-model="gist_url")
+    option(value="")
+    option(v-for="(g, i) in gists" :key="g.url ?? g.title ?? i" :value="g.url") {{ g.title }}
+  button(@click="update_cache(true)") fetch force
+  ul
+    li.bookmark(v-for="[k, v] in bookmarks" :key="k")
+      a(:href="k") {{ v }}
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<style scoped lang="less">
+ul {
+  list-style: none;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+li.bookmark {
+  border: 1px solid grey;
+  border-radius: 8px;
+  padding: 8px;
+  margin: 2px;
+  background-color: #fff;
+  display: inline-block;
+  width: 300px;
+
+  &:hover {
+    background-color: #eff;
+    border-color: blue;
+    cursor: pointer;
+  }
 }
 </style>
