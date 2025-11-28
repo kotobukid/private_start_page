@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use axum::extract::Query;
-use axum::http::{header, HeaderMap, StatusCode};
-use axum::response::IntoResponse;
 use axum::extract::State;
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::IntoResponse;
 
 use serde::Deserialize;
 use tokio::fs;
@@ -53,12 +53,10 @@ pub async fn serve_bookmarks(
 
     let force_yes = matches!(q.force.as_deref(), Some("yes"));
 
-    if !force_yes {
-        if let Some(bytes) = load_cache().await? {
-            return Ok(as_json_response(bytes));
-        }
-        // cache miss -> fallthrough to fetch
+    if !force_yes && let Some(bytes) = load_cache().await? {
+        return Ok(as_json_response(bytes));
     }
+    // cache miss -> fallthrough to fetch
 
     let url = q.url.as_deref().unwrap_or("").trim();
     if url.is_empty() {

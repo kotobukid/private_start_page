@@ -100,8 +100,10 @@ const moveRow = (idx: number, dir: -1 | 1) => {
   const to = idx + dir
   if (to < 0 || to >= next.length) return
   const [item] = next.splice(idx, 1)
-  next.splice(to, 0, item)
-  bookmarks.value = next
+  if (item) {
+    next.splice(to, 0, item)
+    bookmarks.value = next
+  }
 }
 
 const copyJsonToClipboard = async () => {
@@ -152,16 +154,16 @@ const copyJsonToClipboard = async () => {
           .th タイトル
           .th 操作
         .tbody
-          .tr(v-for="([url, title], idx) in bookmarks" :key="idx")
+          .tr(v-for="([url, title], index) in bookmarks" :key="index")
             .td
-              input(type="text" v-model="bookmarks[idx][0]" placeholder="https://... または javascript:...")
-              span.err(v-if="bookmarks[idx][0] && !isAllowedUrl(bookmarks[idx][0])") URLが不正です
+              input(type="text" v-model="bookmarks[index][0]" placeholder="https://... または javascript:...")
+              span.err(v-if="bookmarks[index][0] && !isAllowedUrl(bookmarks[index][0])") URLが不正です
             .td
-              input(type="text" v-model="bookmarks[idx][1]" placeholder="任意（空ならURLが使われます）")
+              input(type="text" v-model="bookmarks[index][1]" placeholder="任意（空ならURLが使われます）")
             .td.ops
-              button(@click="moveRow(idx,-1)" :disabled="idx===0") ↑
-              button(@click="moveRow(idx,1)" :disabled="idx===bookmarks.length-1") ↓
-              button.danger(@click="removeRow(idx)") 削除
+              button(@click="moveRow(index,-1)" :disabled="index===0") ↑
+              button(@click="moveRow(index,1)" :disabled="index===bookmarks.length-1") ↓
+              button.danger(@click="removeRow(index)") 削除
         .tfoot
           button(@click="addRow") 行を追加
 </template>
