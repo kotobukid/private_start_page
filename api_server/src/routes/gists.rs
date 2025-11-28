@@ -16,12 +16,14 @@ pub struct GistsResponse {
 pub struct BookmarkList {
     pub title: String,
     pub url: String,
+    pub html_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Gist {
     pub files: HashMap<String, GistFile>,
     pub description: Option<String>,
+    pub html_url: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,6 +70,7 @@ pub async fn get_gists(State(state): State<AppState>) -> Result<impl IntoRespons
             Some(BookmarkList {
                 title: target_file.filename.clone(),
                 url: target_file.raw_url.clone(),
+                html_url: gist.html_url.clone(),
             })
         })
         .collect();
