@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8.7", features = ["macros"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "signal"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -13,3 +13,9 @@ dotenvy = "0.15"
 thiserror = "2.0.17"
 chrono = { version = "0.4", features = ["serde"] }
 tower-http = { version = "0.6", features = ["fs", "compression-full"] }
+
+[profile.release]
+strip = true        # バイナリからデバッグ情報を削除（サイズ大幅減）
+lto = true          # Link Time Optimization（最適化強化・サイズ減）
+codegen-units = 1   # 並列コンパイルを犠牲にして最適化精度を上げる
+panic = "abort"     # パニック時にスタック巻き戻し処理を含めない（サイズ減）

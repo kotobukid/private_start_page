@@ -38,20 +38,32 @@ async fn main() {
         http,
     };
 
+    let app_dir_abs = match std::env::var("APP_DIR_ABS") {
+        Ok(dir) => dir,
+        Err(_) => {
+            eprintln!("環境変数 APP_DIR_ABS が設定されていません。");
+            std::process::exit(1);
+        }
+    };
+
     // 静的ファイル (front のビルド成果物) を配信
     // api_server クレート直下の `public/` をルートにする
-    let public_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("public");
+    let public_dir = std::path::PathBuf::from(app_dir_abs).join("public");
     let static_files = ServeDir::new(&public_dir)
         // SPA ルーティング用フォールバック: 404 は index.html を返す
         .not_found_service(ServeFile::new(public_dir.join("index.html")));
 
+    println!("Serving static files from {}", public_dir.display());
+
     // API ルータを /api にネスト
     let api = Router::new()
+        .route("/healthz", get(|| async { "ok" }))
         .route("/gists.json", get(get_gists))
         .route("/bookmarks.json", get(serve_bookmarks));
 
     let app = Router::new()
         .nest("/api", api)
+        .nest_service("/assets", ServeDir::new(public_dir.join("assets")))
         // Axum 0.8 ではルートへの nest は不可。未マッチは静的配信へフォールバック
         .fallback_service(static_files)
         .layer(CompressionLayer::new())
@@ -60,14 +72,47 @@ async fn main() {
     // 環境変数からホストとポートを取得、なければデフォルト値を使用
     // 0.0.0.0 を指定することで、外部（LAN内の他マシン等）からのアクセスを受け入れる
     let host = env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
-    let port = env::var("SERVER_PORT").unwrap_or_else(|_| "3000".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let addr_str = format!("{}:{}", host, port);
 
     let addr: SocketAddr = addr_str
         .parse()
-        .expect("Invalid address format: Check SERVER_HOST and SERVER_PORT");
+        .expect("Invalid address format: Check SERVER_HOST and PORT");
 
     println!("API server listening on http://{}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+}
+
+/// グレースフルシャットダウンのためのシグナルハンドラ
+/// Cloud Run は SIGTERM を送信するため、これを確実にキャッチする必要がある
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            println!("Ctrl+C received, starting graceful shutdown");
+        },
+        _ = terminate => {
+            println!("SIGTERM received, starting graceful shutdown");
+        },
+    }
 }
