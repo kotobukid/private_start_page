@@ -57,7 +57,16 @@ async fn main() {
         .layer(CompressionLayer::new())
         .with_state(state);
 
-    let addr: SocketAddr = "127.0.0.1:3000".parse().unwrap();
+    // 環境変数からホストとポートを取得、なければデフォルト値を使用
+    // 0.0.0.0 を指定することで、外部（LAN内の他マシン等）からのアクセスを受け入れる
+    let host = env::var("SERVER_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let port = env::var("SERVER_PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr_str = format!("{}:{}", host, port);
+
+    let addr: SocketAddr = addr_str
+        .parse()
+        .expect("Invalid address format: Check SERVER_HOST and SERVER_PORT");
+
     println!("API server listening on http://{}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
