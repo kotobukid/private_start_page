@@ -1,4 +1,4 @@
-# Private Start Page
+# Public Private Start Page
 
 # 概要
 

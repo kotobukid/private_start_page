@@ -120,7 +120,7 @@ const copyJsonToClipboard = async () => {
   nav.app-nav
     .nav-inner.container
       .left
-        .brand Private Start Page
+        .brand Public Private Start Page
         ul.tabs
           li(:class="{active: activeTab==='apps'}")
             button.tab(@click="activeTab='apps'") アプリ
